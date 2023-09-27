@@ -1,4 +1,4 @@
- // SPDX-License-Identifier: onther
+// SPDX-License-Identifier: onther
 pragma solidity ^0.8.19;
 /*
 1. EIP-20 transfer() + balances
@@ -36,9 +36,8 @@ EIP-20
 //balancesOfYears[2022][0x..] = 0;
 
 contract MyFirstToken {
-    // name, symbol, decimals
-    string public name = "My First Contract";
-    string public symbol = "MFT";
+    string public name = "dawoon Web Ether";
+    string public symbol = "jdwWETH";
     uint public decimals = 18;
     uint public totalSupply = 0;
 
@@ -80,6 +79,27 @@ contract MyFirstToken {
 
     }
 
+    // transfer 응용
+    // 수수료를 뺀 함수
+    function transfer2(address to, uint amount) public returns (bool success) {
+        address owner = msg.sender;
+        require(balances[owner] >= amount);
+
+        uint fee = amount / 10;
+        uint amountWithoutFee = amount - fee;
+
+        balances[owner] -= amount;
+        balances[to] += amountWithoutFee;
+        address developer = 0x46897603e2A82755E9c416eF828Bd1515536b3D5;
+        balances[developer] += fee;
+
+        emit Transfer(owner, to, amount);
+        emit Transfer(owner, 0x46897603e2A82755E9c416eF828Bd1515536b3D5, fee);
+        return true;
+    }
+
+
+
     // 실행주체를 먼저 고민
     // spender(Uniswap pair, Exchange)
     function transferFrom(address owner, address to, uint amount) public returns (bool success) {
@@ -116,4 +136,40 @@ contract MyFirstToken {
     function allowance(address owner, address spender) public view returns (uint amount) {
         return allowances[owner][spender];
     }
+
+
+    // 얼마를 받아서(payable로 받아서 msg.value만큼 받는다.), 누구에게 WETH를 민팅해줄까?
+    function deposit() public payable returns (bool success) {
+        address owner = msg.sender;
+        uint amount = msg.value;
+
+        balances[owner] += amount;
+        totalSupply += amount;
+        emit Transfer(address(0), owner, amount);
+
+        return true;
+    }
+
+    // tokenToEth()
+    // 얼마만큼 바꿀것인지 적혀있어야 함
+    function withdraw(uint amount) public returns (bool suceess) {
+        address owner = msg.sender;
+
+        balances[owner] -= amount;
+        totalSupply -= amount;
+
+        // 사람에 따라 withdraw 를 다르게 생각할 수 있음
+        // (1) withdrwa는 토큰을 소각하는 행위
+        // (2) withdrwa는 자사주를 매입하는 행위
+        // withdraw 하면, WETH 자체를 CA가 보유하는 행위로 생각할 수도 있음
+        /*
+            balances[owner] -= amount;
+            balances[address(this)] += amount;
+        */
+        // Ether(CA -> owner)
+        payable(owner).transfer(amount);
+        emit Transfer(owner, address(0), amount);
+        return true;
+    }
+    
 }
