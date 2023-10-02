@@ -11,11 +11,39 @@ contract Exchange is ERC20 {
 
     }
 
+    //function addLiquidity() pulbic payable {}
+
+    function removeLiquidity(uint lpTokenAmount) public {
+        // (지분율) = (lpTokenAmount) / (전체 발행된 lpTokenAmount)
+        //uint lpShares = lptokenAmount / balanceOf(address(this)); 
+        // 정수인데, 지분율은 소수라 소수가 버려짐. 소수점은 uint로 저장하면 버려지게 된다.
+        // lpShares는 언제나 0인 값이 나와버림. 반환 x
+
+        _burn(msg.sender, lpTokenAmount);
+
+        // 총 Ether의 갯수 * 지분율
+        uint etherAmount = address(this).balance * lpTokenAmount / balanceOf(address(this));
+        // 총 Token의 갯수 * 지분율
+
+        ERC20 token = ERC20(tokenAddress);
+        uint tokenAmount = token.balanceOf(address(this)) * lpTokenAmount / balanceOf(address(this));
+
+        payable(msg.sender).transfer(etherAmount);
+        token.transfer(msg.sender, tokenAmount);
+    }
+
+
     function etherToTokenInput(uint minTokens) public payable {
         uint etherAmount = msg.value;
-        uint tokenAmount = etherAmount * 997 / 1000;
-        require(tokenAmount >= minTokens);
         ERC20 token = ERC20(tokenAddress);
+        //address(this).balance --> 이렇게 하면 안된다. 유저가 가지고 있는 수량만큼 빼줘야 함
+        //token.balanceOf(address(this))
+        uint tokenAmount = getInputPrice(
+            etherAmount, 
+            address(this).balance - msg.value, 
+            token.balanceOf(address(this))
+        );
+        require(tokenAmount >= minTokens);
         token.transfer(msg.sender, tokenAmount);
 
     }
@@ -26,16 +54,16 @@ contract Exchange is ERC20 {
         uint inputReserve, 
         uint outputReserve
     ) public pure returns (uint outputAmount) {
-
+        return inputAmount * 997 / 1000;
     }
 
-    // getInputPrice == getOutputamount
+    // getOutputPrice == getInputamount
     function getOutputPrice(
         uint outputAmount,
         uint inputReserve,
         uint outputReserve
     ) public pure returns (uint inputAmount) {
-
+        return outputAmount / 997 * 1000; 
     }
 
     function etherToTokenOutput(uint tokenAmount, uint maxEtherAmount) public payable {
